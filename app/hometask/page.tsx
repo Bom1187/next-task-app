@@ -6,9 +6,11 @@ import Footer from "@/components/Footer";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClients";
+import Swal from "sweetalert2";
 
 // รูปแบบข้อมูลจาก Supabase
 type Task = {
+  id: number | string;
   title: string;
   detail: string;
   image_url: string;
@@ -24,7 +26,7 @@ export default function Page() {
     const fetchTasks = async () => {
       const { data, error: fetchError } = await supabase
         .from("task_tb")
-        .select("image_url, title, detail, isCompleted")
+        .select("id, image_url, title, detail, isCompleted")
         .order("update_at", { ascending: false });
 
       // ตรวจสอบ error
@@ -39,6 +41,37 @@ export default function Page() {
 
     fetchTasks();
   }, []);
+
+  const handleDelete = async (taskId: number | string) => {
+    const result = await Swal.fire({
+      title: "ต้องการลบข้อมูลหรือไม่",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "ยืนยัน",
+      cancelButtonText: "ยกเลิก",
+      confirmButtonColor: "#dc2626",
+      cancelButtonColor: "#6b7280",
+    });
+
+    if (!result.isConfirmed) {
+      return;
+    }
+
+    const { error: deleteError } = await supabase
+      .from("task_tb")
+      .delete()
+      .eq("id", taskId);
+
+    if (deleteError) {
+      await Swal.fire("เกิดข้อผิดพลาด", deleteError.message, "error");
+      return;
+    }
+
+    setTasks((currentTasks) =>
+      currentTasks.filter((task) => task.id !== taskId),
+    );
+    await Swal.fire("สำเร็จ", "ลบข้อมูลงานเรียบร้อยแล้ว", "success");
+  };
 
   return (
     <div className="w-full">
@@ -70,31 +103,21 @@ export default function Page() {
       <table className="w-4/5 mt-10 mx-auto border border-gray-500 bg-gray-100">
         <thead>
           <tr>
-            <th className="border border-gray-500 px-4 py-2">
-              รูปงาน
-            </th>
+            <th className="border border-gray-500 px-4 py-2">รูปงาน</th>
 
-            <th className="border border-gray-500 px-4 py-2">
-              ชื่องาน
-            </th>
+            <th className="border border-gray-500 px-4 py-2">ชื่องาน</th>
 
-            <th className="border border-gray-500 px-4 py-2">
-              รายละเอียดงาน
-            </th>
+            <th className="border border-gray-500 px-4 py-2">รายละเอียดงาน</th>
 
-            <th className="border border-gray-500 px-4 py-2">
-              สถานะงาน
-            </th>
+            <th className="border border-gray-500 px-4 py-2">สถานะงาน</th>
 
-            <th className="border border-gray-500 px-4 py-2">
-              ลบ/แก้ไข
-            </th>
+            <th className="border border-gray-500 px-4 py-2">ลบ/แก้ไข</th>
           </tr>
         </thead>
 
         <tbody>
-          {tasks.map((task, index) => (
-            <tr key={index}>
+          {tasks.map((task) => (
+            <tr key={task.id}>
               {/* รูปงาน */}
               <td className="border border-gray-500 px-4 py-2 text-center">
                 <img
@@ -107,9 +130,7 @@ export default function Page() {
               </td>
 
               {/* ชื่องาน */}
-              <td className="border border-gray-500 px-4 py-2">
-                {task.title}
-              </td>
+              <td className="border border-gray-500 px-4 py-2">{task.title}</td>
 
               {/* รายละเอียดงาน */}
               <td className="border border-gray-500 px-4 py-2">
@@ -119,25 +140,28 @@ export default function Page() {
               {/* สถานะงาน */}
               <td className="border border-gray-500 px-4 py-2 text-center">
                 {task.isCompleted ? (
-                  <span className="text-green-600 font-bold">
-                    ✔ เสร็จ
-                  </span>
+                  <span className="text-green-600 font-bold">✔ เสร็จ</span>
                 ) : (
-                  <span className="text-red-600 font-bold">
-                    ❌ ไม่เสร็จ
-                  </span>
+                  <span className="text-red-600 font-bold">❌ ไม่เสร็จ</span>
                 )}
               </td>
 
               {/* ปุ่มแก้ไข / ลบ */}
               <td className="border border-gray-500 px-4 py-2 text-center">
-                <button className="bg-yellow-500 text-white px-3 py-1 rounded mr-2">
-                  แก้ไข
-                </button>
-
-                <button className="bg-red-500 text-white px-3 py-1 rounded">
-                  ลบ
-                </button>
+                <div className="flex justify-center items-center gap-2">
+                  <Link
+                    href={`/edittask?id=${encodeURIComponent(task.id)}`}
+                    className="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600"
+                  >
+                    แก้ไข
+                  </Link>
+                  <button
+                    onClick={() => handleDelete(task.id)}
+                    className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+                  >
+                    ลบ
+                  </button>
+                </div>
               </td>
             </tr>
           ))}

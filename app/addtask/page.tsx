@@ -67,7 +67,7 @@ export default function Page() {
       title: title,
       detail: detail,
       image_url: image_url,
-      isCompletedd: isCompleted,
+      isCompleted: isCompleted,
     });
 
     //ตรวจสอบบันทึกข้อมูล
